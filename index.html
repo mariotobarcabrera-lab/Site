@@ -56,13 +56,25 @@ tr.total td{font-weight:700;background:#0f172a;}
 <body>
 <div class="container">
 
-<h1>Control Personal</h1>
+<h1>💰 Control Financiero Personal</h1>
 
 <div class="dashboard">
     <div class="box"><h3>Ingreso</h3><h2 id="lblIngreso">$0.00</h2></div>
     <div class="box"><h3>Gastos</h3><h2 id="lblGastos">$0.00</h2></div>
     <div class="box"><h3>Saldo</h3><h2 id="lblSaldo">$0.00</h2></div>
     <div class="box"><h3>Deuda Total</h3><h2 id="lblDeudaTotal">$0.00</h2></div>
+</div>
+
+<div class="card">
+    <h2>☁ Sincronización</h2>
+    <p id="nubeEstado" class="vacio">Cargando…</p>
+    <div id="nubeForm" class="grid grid-2">
+        <input type="email" id="nubeEmail" placeholder="Correo" autocomplete="email">
+        <input type="password" id="nubePass" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="current-password">
+        <button id="btnEntrar">Entrar</button>
+        <button id="btnCrear" class="sec">Crear cuenta</button>
+    </div>
+    <button id="btnSalir" class="sec" style="display:none">Cerrar sesión</button>
 </div>
 
 <div class="card">
@@ -162,7 +174,33 @@ function guardar(){
         localStorage.setItem("categorias", JSON.stringify(categorias));
         localStorage.setItem("datos", JSON.stringify(datos));
         localStorage.setItem("deudas", JSON.stringify(deudas));
+        localStorage.setItem("actualizado", String(Date.now()));
     }catch(e){ console.error("No se pudo guardar", e); }
+    if(window.nubeSubir) window.nubeSubir();
+}
+
+/* Puente con la nube (lo usa el módulo de Firebase del final) */
+window.obtenerEstado = function(){
+    return {categorias, datos, deudas, actualizado: Number(localStorage.getItem("actualizado")) || 0};
+};
+window.aplicarDatosNube = function(d, actualizado){
+    categorias = d.categorias || [];
+    datos = d.datos || {};
+    deudas = d.deudas || [];
+    try{
+        localStorage.setItem("categorias", JSON.stringify(categorias));
+        localStorage.setItem("datos", JSON.stringify(datos));
+        localStorage.setItem("deudas", JSON.stringify(deudas));
+        localStorage.setItem("actualizado", String(actualizado));
+    }catch(e){}
+    cargarCategorias();
+    cargarDeudas();
+    cargarMes();
+};
+/* Datos antiguos sin fecha: se les asigna una para que no pierdan contra la nube */
+if(!localStorage.getItem("actualizado") &&
+   (categorias.length || deudas.length || Object.keys(datos).length)){
+    localStorage.setItem("actualizado", String(Date.now()));
 }
 
 /* ===== Utilidades ===== */
@@ -475,6 +513,102 @@ $("montoCategoriaCaptura").addEventListener("keydown", e => { if(e.key === "Ente
 cargarCategorias();
 cargarDeudas();
 cargarMes();
+</script>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut}
+    from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getFirestore, doc, setDoc, onSnapshot}
+    from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+/* ===== PEGA AQUÍ los datos de tu proyecto Firebase ===== */
+const firebaseConfig = {
+    apiKey: "PEGA_AQUI",
+    authDomain: "PEGA_AQUI",
+    projectId: "PEGA_AQUI",
+    appId: "PEGA_AQUI"
+};
+
+const $n = id => document.getElementById(id);
+const estado = $n("nubeEstado");
+
+if(firebaseConfig.apiKey === "PEGA_AQUI"){
+    estado.textContent = "Sincronización sin configurar: los datos se guardan solo en este dispositivo.";
+    $n("nubeForm").style.display = "none";
+}else{
+    iniciar();
+}
+
+function iniciar(){
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    let ref = null, anular = null, temporizador = null;
+
+    const mensajes = {
+        "auth/invalid-credential": "Correo o contraseña incorrectos.",
+        "auth/invalid-email": "El correo no es válido.",
+        "auth/email-already-in-use": "Ese correo ya tiene cuenta. Usa Entrar.",
+        "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+        "auth/missing-password": "Escribe la contraseña.",
+        "auth/too-many-requests": "Demasiados intentos. Espera un momento."
+    };
+    const error = e => { estado.textContent = "⚠ " + (mensajes[e.code] || "No se pudo completar la acción (" + (e.code || e.message) + ")."); };
+
+    async function subirAhora(){
+        if(!ref) return;
+        const e = window.obtenerEstado();
+        try{
+            await setDoc(ref, {
+                json: JSON.stringify({categorias:e.categorias, datos:e.datos, deudas:e.deudas}),
+                actualizado: e.actualizado
+            });
+        }catch(err){ estado.textContent = "⚠ No se pudo sincronizar (" + (err.code || err.message) + ")."; }
+    }
+
+    /* La app llama a esto cada vez que guarda; se agrupa para no escribir en cada tecla */
+    window.nubeSubir = () => {
+        if(!ref) return;
+        clearTimeout(temporizador);
+        temporizador = setTimeout(subirAhora, 800);
+    };
+
+    $n("btnEntrar").onclick = () =>
+        signInWithEmailAndPassword(auth, $n("nubeEmail").value.trim(), $n("nubePass").value).catch(error);
+    $n("btnCrear").onclick = () =>
+        createUserWithEmailAndPassword(auth, $n("nubeEmail").value.trim(), $n("nubePass").value).catch(error);
+    $n("btnSalir").onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+        if(anular){ anular(); anular = null; }
+        ref = null;
+        if(!user){
+            $n("nubeForm").style.display = "";
+            $n("btnSalir").style.display = "none";
+            estado.textContent = "Inicia sesión para sincronizar tus datos entre dispositivos.";
+            return;
+        }
+        $n("nubeForm").style.display = "none";
+        $n("btnSalir").style.display = "";
+        $n("nubePass").value = "";
+        estado.textContent = "☁ Sincronizando como " + user.email + "…";
+        ref = doc(db, "usuarios", user.uid);
+
+        anular = onSnapshot(ref, snap => {
+            if(snap.metadata.hasPendingWrites) return;
+            const local = window.obtenerEstado();
+            if(!snap.exists()){ subirAhora(); estado.textContent = "☁ Sincronizado como " + user.email; return; }
+            const nube = snap.data();
+            if((nube.actualizado || 0) > local.actualizado){
+                try{ window.aplicarDatosNube(JSON.parse(nube.json), nube.actualizado || 0); }catch(e){ console.error(e); }
+            }else if((nube.actualizado || 0) < local.actualizado){
+                subirAhora();
+            }
+            estado.textContent = "☁ Sincronizado como " + user.email;
+        }, err => { estado.textContent = "⚠ Error de sincronización (" + (err.code || err.message) + ")."; });
+    });
+}
 </script>
 </body>
 </html>
