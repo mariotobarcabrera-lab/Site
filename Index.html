@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control Financiero Personal</title>
+<style>
+:root{
+    --primary:#38bdf8;
+    --bg:#111827;
+    --card:#1f2937;
+    --border:#374151;
+    --text:#f8fafc;
+    --danger:#991b1b;
+    --warn:#92400e;
+    --ok:#22c55e;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif;}
+body{background:var(--bg);color:var(--text);padding:20px;}
+.container{max-width:1400px;margin:auto;}
+.card{background:var(--card);border-radius:10px;padding:20px;margin-bottom:20px;}
+h1,h2,h3{margin-bottom:15px;}
+.grid{display:grid;gap:10px;}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-bottom:20px;}
+.box{background:var(--primary);color:#0f172a;text-align:center;border-radius:10px;padding:15px;}
+.box h3{margin-bottom:5px;font-size:16px;}
+input,select{width:100%;padding:10px;border-radius:6px;border:1px solid var(--border);background:#0f172a;color:white;}
+button{background:var(--primary);color:#0f172a;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;}
+button:hover{filter:brightness(1.1);}
+button.danger{background:#ef4444;color:white;}
+button.sec{background:#475569;color:white;}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--primary);color:#0f172a;}
+td,th{border:1px solid var(--border);padding:10px;text-align:left;}
+td.num,th.num{text-align:right;}
+tr.total td{font-weight:700;background:#0f172a;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;overflow-y:auto;}
+.modal-content{background:var(--card);max-width:900px;margin:30px auto;border-radius:10px;padding:20px;}
+.item{border:1px solid var(--border);padding:10px;border-radius:8px;margin-bottom:10px;}
+.item .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;align-items:center;margin-bottom:8px;}
+.item .acciones{display:flex;gap:8px;flex-wrap:wrap;}
+.progress{height:18px;border-radius:20px;overflow:hidden;background:#334155;margin:8px 0;}
+.progress-bar{background:var(--primary);height:100%;transition:width .3s;}
+.alerta{background:var(--danger);padding:10px;margin-top:10px;border-radius:6px;}
+.alerta.warn{background:var(--warn);}
+.vacio{color:#94a3b8;padding:10px 0;}
+.captura-nav{display:flex;gap:10px;flex-wrap:wrap;}
+@media(max-width:768px){
+    body{padding:10px;}
+    table{display:block;overflow-x:auto;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Control Personal</h1>
+
+<div class="dashboard">
+    <div class="box"><h3>Ingreso</h3><h2 id="lblIngreso">$0.00</h2></div>
+    <div class="box"><h3>Gastos</h3><h2 id="lblGastos">$0.00</h2></div>
+    <div class="box"><h3>Saldo</h3><h2 id="lblSaldo">$0.00</h2></div>
+    <div class="box"><h3>Deuda Total</h3><h2 id="lblDeudaTotal">$0.00</h2></div>
+</div>
+
+<div class="card">
+    <h2>Información del Mes</h2>
+    <div class="grid grid-2">
+        <input type="month" id="mes" aria-label="Mes">
+        <input type="number" id="ingreso" min="0" step="0.01" placeholder="Ingreso mensual">
+        <input type="number" id="presupuesto" min="0" step="0.01" placeholder="Presupuesto mensual">
+    </div>
+</div>
+
+<div class="card">
+    <h2>Categorías</h2>
+    <div class="grid grid-2">
+        <input type="text" id="nombreCategoria" placeholder="Nombre categoría">
+        <select id="tipoCategoria">
+            <option value="variable">Variable</option>
+            <option value="fija">Fija</option>
+        </select>
+        <input type="number" id="montoCategoria" min="0" step="0.01" placeholder="Monto fijo">
+        <button onclick="agregarCategoria()">Agregar Categoría</button>
+    </div>
+    <br>
+    <button onclick="abrirCategorias()">⚙ Administrar Categorías</button>
+</div>
+
+<div class="card">
+    <h2>Gastos del Mes</h2>
+    <button onclick="abrirCapturaRapida()">📝 Actualizar Gastos del Mes</button>
+    <br><br>
+    <table>
+        <thead>
+            <tr><th>Categoría</th><th>Tipo</th><th class="num">Monto</th></tr>
+        </thead>
+        <tbody id="tablaGastos"></tbody>
+    </table>
+    <div id="alertas"></div>
+</div>
+
+<div class="card">
+    <h2>💳 Deudas</h2>
+    <div class="grid grid-2">
+        <input type="text" id="nombreDeuda" placeholder="Nombre deuda">
+        <input type="number" id="montoInicial" min="0" step="0.01" placeholder="Monto original">
+        <input type="number" id="saldoDeuda" min="0" step="0.01" placeholder="Saldo pendiente">
+        <button onclick="agregarDeuda()">Agregar Deuda</button>
+    </div>
+    <br>
+    <div id="listaDeudas"></div>
+</div>
+
+</div>
+
+<!-- Modal administración de categorías -->
+<div id="modalCategorias" class="modal">
+    <div class="modal-content">
+        <h2>Administración de Categorías</h2>
+        <div id="listaCategorias"></div>
+        <br>
+        <button onclick="cerrarCategorias()">Cerrar</button>
+    </div>
+</div>
+
+<!-- Modal captura rápida -->
+<div id="modalCaptura" class="modal">
+    <div class="modal-content">
+        <h2>Captura Rápida</h2>
+        <p id="contadorCategoria"></p>
+        <h3 id="nombreCategoriaCaptura"></h3>
+        <input type="number" id="montoCategoriaCaptura" min="0" step="0.01" placeholder="Monto">
+        <br><br>
+        <div class="captura-nav">
+            <button class="sec" onclick="categoriaAnterior()">← Anterior</button>
+            <button id="btnSiguiente" onclick="categoriaSiguiente()">Siguiente →</button>
+            <button class="sec" onclick="cerrarCaptura()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ===== Estado ===== */
+function leer(clave, defecto){
+    try{
+        const v = JSON.parse(localStorage.getItem(clave));
+        return v === null || v === undefined ? defecto : v;
+    }catch(e){ return defecto; }
+}
+
+let categorias = leer("categorias", []);
+let datos      = leer("datos", {});
+let deudas     = leer("deudas", []);
+let categoriaActual = 0;
+let listaCaptura = [];
+
+function guardar(){
+    try{
+        localStorage.setItem("categorias", JSON.stringify(categorias));
+        localStorage.setItem("datos", JSON.stringify(datos));
+        localStorage.setItem("deudas", JSON.stringify(deudas));
+    }catch(e){ console.error("No se pudo guardar", e); }
+}
+
+/* ===== Utilidades ===== */
+const $ = id => document.getElementById(id);
+const num = v => { const n = parseFloat(v); return isNaN(n) || n < 0 ? 0 : n; };
+const dinero = n => n.toLocaleString("en-US",{style:"currency",currency:"USD"});
+const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+function esc(s){
+    return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function mesActual(){ return $("mes").value; }
+function datosMes(){
+    const m = mesActual();
+    if(!datos[m]) datos[m] = {ingreso:0, presupuesto:0, gastos:{}};
+    if(!datos[m].gastos) datos[m].gastos = {};
+    return datos[m];
+}
+function montoGasto(cat){
+    return cat.tipo === "fija" ? num(cat.monto) : num(datosMes().gastos[cat.id]);
+}
+function totalGastos(){
+    return categorias.reduce((s,c) => s + montoGasto(c), 0);
+}
+
+/* ===== Información del mes ===== */
+function cargarMes(){
+    const d = datosMes();
+    $("ingreso").value = d.ingreso || "";
+    $("presupuesto").value = d.presupuesto || "";
+    cargarTabla();
+    actualizarDashboard();
+}
+function guardarInfoMes(){
+    const d = datosMes();
+    d.ingreso = num($("ingreso").value);
+    d.presupuesto = num($("presupuesto").value);
+    guardar();
+    cargarTabla();
+    actualizarDashboard();
+}
+
+/* ===== Categorías ===== */
+function agregarCategoria(){
+    const nombre = $("nombreCategoria").value.trim();
+    const tipo = $("tipoCategoria").value;
+    const monto = num($("montoCategoria").value);
+    if(!nombre){ alert("Escribe el nombre de la categoría."); return; }
+    if(tipo === "fija" && monto <= 0){ alert("Las categorías fijas necesitan un monto."); return; }
+    categorias.push({id:nuevoId(), nombre, tipo, monto: tipo === "fija" ? monto : 0});
+    $("nombreCategoria").value = "";
+    $("montoCategoria").value = "";
+    guardar();
+    cargarCategorias();
+    cargarTabla();
+    actualizarDashboard();
+}
+
+function editarCategoria(id, campo, valor){
+    const c = categorias.find(x => x.id === id);
+    if(!c) return;
+    if(campo === "nombre"){
+        valor = valor.trim();
+        if(!valor){ cargarCategorias(); return; }
+        c.nombre = valor;
+    }else if(campo === "tipo"){
+        c.tipo = valor;
+        if(valor === "variable") c.monto = 0;
+    }else if(campo === "monto"){
+        c.monto = num(valor);
+    }
+    guardar();
+    cargarCategorias();
+    cargarTabla();
+    actualizarDashboard();
+}
+
+function duplicarCategoria(id){
+    const c = categorias.find(x => x.id === id);
+    if(!c) return;
+    const copia = {...c, id:nuevoId(), nombre:c.nombre + " (copia)"};
+    categorias.splice(categorias.indexOf(c)+1, 0, copia);
+    guardar();
+    cargarCategorias();
+    cargarTabla();
+    actualizarDashboard();
+}
+
+function eliminarCategoria(id){
+    const c = categorias.find(x => x.id === id);
+    if(!c) return;
+    if(!confirm('¿Eliminar la categoría "' + c.nombre + '"?')) return;
+    categorias = categorias.filter(x => x.id !== id);
+    Object.values(datos).forEach(m => { if(m.gastos) delete m.gastos[id]; });
+    guardar();
+    cargarCategorias();
+    cargarTabla();
+    actualizarDashboard();
+}
+
+function cargarCategorias(){
+    const cont = $("listaCategorias");
+    if(!categorias.length){
+        cont.innerHTML = '<p class="vacio">Aún no hay categorías.</p>';
+        return;
+    }
+    cont.innerHTML = categorias.map(c => `
+        <div class="item">
+            <div class="row">
+                <input type="text" value="${esc(c.nombre)}" aria-label="Nombre"
+                    onchange="editarCategoria('${c.id}','nombre',this.value)">
+                <select aria-label="Tipo" onchange="editarCategoria('${c.id}','tipo',this.value)">
+                    <option value="variable" ${c.tipo==="variable"?"selected":""}>Variable</option>
+                    <option value="fija" ${c.tipo==="fija"?"selected":""}>Fija</option>
+                </select>
+                ${c.tipo === "fija"
+                    ? `<input type="number" min="0" step="0.01" value="${num(c.monto)}" aria-label="Monto fijo"
+                        onchange="editarCategoria('${c.id}','monto',this.value)">`
+                    : `<span class="vacio">Monto variable</span>`}
+            </div>
+            <div class="acciones">
+                <button onclick="duplicarCategoria('${c.id}')">Duplicar</button>
+                <button class="danger" onclick="eliminarCategoria('${c.id}')">Eliminar</button>
+            </div>
+        </div>`).join("");
+}
+
+function abrirCategorias(){ cargarCategorias(); $("modalCategorias").style.display = "block"; }
+function cerrarCategorias(){ $("modalCategorias").style.display = "none"; }
+
+/* ===== Deudas (permanentes, no dependen del mes) ===== */
+function agregarDeuda(){
+    const nombre = $("nombreDeuda").value.trim();
+    const inicial = num($("montoInicial").value);
+    const saldoTxt = $("saldoDeuda").value;
+    const saldo = saldoTxt === "" ? inicial : num(saldoTxt);
+    if(!nombre || inicial <= 0){ alert("Indica el nombre y el monto original."); return; }
+    deudas.push({id:nuevoId(), nombre, inicial, saldo: Math.min(saldo, inicial)});
+    $("nombreDeuda").value = "";
+    $("montoInicial").value = "";
+    $("saldoDeuda").value = "";
+    guardar();
+    cargarDeudas();
+    actualizarDashboard();
+}
+
+function editarDeuda(id){
+    const d = deudas.find(x => x.id === id);
+    if(!d) return;
+    const nombre = prompt("Nombre de la deuda:", d.nombre);
+    if(nombre === null) return;
+    const inicial = prompt("Monto original:", d.inicial);
+    if(inicial === null) return;
+    const saldo = prompt("Saldo pendiente:", d.saldo);
+    if(saldo === null) return;
+    const ini = num(inicial);
+    if(!nombre.trim() || ini <= 0){ alert("Datos no válidos."); return; }
+    d.nombre = nombre.trim();
+    d.inicial = ini;
+    d.saldo = Math.min(num(saldo), ini);
+    guardar();
+    cargarDeudas();
+    actualizarDashboard();
+}
+
+function eliminarDeuda(id){
+    const d = deudas.find(x => x.id === id);
+    if(!d) return;
+    if(!confirm('¿Eliminar la deuda "' + d.nombre + '"?')) return;
+    deudas = deudas.filter(x => x.id !== id);
+    guardar();
+    cargarDeudas();
+    actualizarDashboard();
+}
+
+function cargarDeudas(){
+    const cont = $("listaDeudas");
+    if(!deudas.length){
+        cont.innerHTML = '<p class="vacio">No hay deudas registradas.</p>';
+        return;
+    }
+    cont.innerHTML = deudas.map(d => {
+        const pagado = Math.max(0, d.inicial - d.saldo);
+        const pct = d.inicial > 0 ? Math.min(100, Math.round(pagado / d.inicial * 100)) : 0;
+        return `
+        <div class="item">
+            <h3>${esc(d.nombre)}</h3>
+            <p>Original: ${dinero(d.inicial)} · Pagado: ${dinero(pagado)} · Pendiente: ${dinero(d.saldo)}</p>
+            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
+                <div class="progress-bar" style="width:${pct}%"></div>
+            </div>
+            <p>${pct}% pagado</p>
+            <br>
+            <div class="acciones" style="display:flex;gap:8px;flex-wrap:wrap">
+                <button onclick="editarDeuda('${d.id}')">Editar</button>
+                <button class="danger" onclick="eliminarDeuda('${d.id}')">Eliminar</button>
+            </div>
+        </div>`;
+    }).join("");
+}
+
+/* ===== Tabla, alertas y dashboard ===== */
+function cargarTabla(){
+    const tbody = $("tablaGastos");
+    if(!categorias.length){
+        tbody.innerHTML = '<tr><td colspan="3" class="vacio">Crea una categoría para empezar.</td></tr>';
+    }else{
+        tbody.innerHTML = categorias.map(c => `
+            <tr>
+                <td>${esc(c.nombre)}</td>
+                <td>${c.tipo === "fija" ? "Fija" : "Variable"}</td>
+                <td class="num">${dinero(montoGasto(c))}</td>
+            </tr>`).join("") +
+            `<tr class="total"><td colspan="2">Total</td><td class="num">${dinero(totalGastos())}</td></tr>`;
+    }
+    mostrarAlertas();
+}
+
+function mostrarAlertas(){
+    const d = datosMes();
+    const gastos = totalGastos();
+    let html = "";
+    if(d.presupuesto > 0){
+        if(gastos > d.presupuesto){
+            html += `<div class="alerta">⚠ Superaste el presupuesto por ${dinero(gastos - d.presupuesto)}.</div>`;
+        }else if(gastos >= d.presupuesto * 0.8){
+            const pct = Math.round(gastos / d.presupuesto * 100);
+            html += `<div class="alerta warn">⚠ Ya usaste el ${pct}% del presupuesto.</div>`;
+        }
+    }
+    if(d.ingreso > 0 && gastos > d.ingreso){
+        html += `<div class="alerta">🚨 Tus gastos superan tu ingreso por ${dinero(gastos - d.ingreso)}.</div>`;
+    }
+    $("alertas").innerHTML = html;
+}
+
+function actualizarDashboard(){
+    const d = datosMes();
+    const gastos = totalGastos();
+    const saldo = d.ingreso - gastos;
+    const deudaTotal = deudas.reduce((s,x) => s + num(x.saldo), 0);
+    $("lblIngreso").textContent = dinero(d.ingreso);
+    $("lblGastos").textContent = dinero(gastos);
+    $("lblSaldo").textContent = dinero(saldo);
+    $("lblDeudaTotal").textContent = dinero(deudaTotal);
+    $("lblSaldo").style.color = saldo < 0 ? "#991b1b" : "";
+}
+
+/* ===== Captura rápida (una categoría variable por pantalla) ===== */
+function actualizarGasto(id, valor){
+    datosMes().gastos[id] = num(valor);
+    guardar();
+    cargarTabla();
+    actualizarDashboard();
+}
+
+function guardarCapturaActual(){
+    const c = listaCaptura[categoriaActual];
+    if(c) actualizarGasto(c.id, $("montoCategoriaCaptura").value);
+}
+
+function abrirCapturaRapida(){
+    listaCaptura = categorias.filter(c => c.tipo === "variable");
+    if(!listaCaptura.length){
+        alert("No hay categorías variables. Las fijas se calculan automáticamente.");
+        return;
+    }
+    categoriaActual = 0;
+    $("modalCaptura").style.display = "block";
+    mostrarCategoria();
+}
+
+function mostrarCategoria(){
+    const c = listaCaptura[categoriaActual];
+    $("contadorCategoria").textContent = "Categoría " + (categoriaActual + 1) + " de " + listaCaptura.length;
+    $("nombreCategoriaCaptura").textContent = c.nombre;
+    const actual = num(datosMes().gastos[c.id]);
+    $("montoCategoriaCaptura").value = actual || "";
+    $("btnSiguiente").textContent = categoriaActual === listaCaptura.length - 1 ? "Finalizar ✔" : "Siguiente →";
+    $("montoCategoriaCaptura").focus();
+}
+
+function categoriaAnterior(){
+    guardarCapturaActual();
+    if(categoriaActual > 0){ categoriaActual--; mostrarCategoria(); }
+}
+
+function categoriaSiguiente(){
+    guardarCapturaActual();
+    if(categoriaActual < listaCaptura.length - 1){
+        categoriaActual++;
+        mostrarCategoria();
+    }else{
+        cerrarCaptura();
+    }
+}
+
+function cerrarCaptura(){
+    guardarCapturaActual();
+    $("modalCaptura").style.display = "none";
+}
+
+/* ===== Inicio ===== */
+$("mes").value = new Date().toISOString().slice(0,7);
+$("mes").addEventListener("change", cargarMes);
+$("ingreso").addEventListener("input", guardarInfoMes);
+$("presupuesto").addEventListener("input", guardarInfoMes);
+$("montoCategoriaCaptura").addEventListener("keydown", e => { if(e.key === "Enter") categoriaSiguiente(); });
+
+cargarCategorias();
+cargarDeudas();
+cargarMes();
+</script>
+</body>
+</html>
