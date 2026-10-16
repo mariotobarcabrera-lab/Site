@@ -504,11 +504,28 @@ function cerrarCaptura(){
 }
 
 /* ===== Inicio ===== */
-$("mes").value = new Date().toISOString().slice(0,7);
-$("mes").addEventListener("change", cargarMes);
+// 1. Intentar leer el mes guardado directamente de localStorage (sin JSON.parse)
+const mesGuardado = localStorage.getItem("mesSeleccionado");
+
+// 2. Si existe el mes guardado, ponerlo. Si no, poner el mes actual.
+if (mesGuardado) {
+    $("mes").value = mesGuardado;
+} else {
+    $("mes").value = new Date().toISOString().slice(0,7);
+}
+
+// 3. Escuchar el cambio y guardar el valor seleccionado
+$("mes").addEventListener("change", () => {
+    const valorSeleccionado = $("mes").value;
+    localStorage.setItem("mesSeleccionado", valorSeleccionado); // Guardar como texto simple
+    cargarMes(); // Actualizar la tabla y el dashboard
+});
+
 $("ingreso").addEventListener("input", guardarInfoMes);
 $("presupuesto").addEventListener("input", guardarInfoMes);
-$("montoCategoriaCaptura").addEventListener("keydown", e => { if(e.key === "Enter") categoriaSiguiente(); });
+$("montoCategoriaCaptura").addEventListener("keydown", e => { 
+    if(e.key === "Enter") categoriaSiguiente(); 
+});
 
 cargarCategorias();
 cargarDeudas();
