@@ -68,6 +68,22 @@ function iniciar(){
         sendPasswordResetEmail(auth, correo).then(() => msg(t("Si el correo existe, recibirás un mensaje para cambiar la contraseña."))).catch(fallo);
     };
     $("btnLogout").onclick = () => signOut(auth);
+    $("btnVerif").onclick = async () => {
+        const u = auth.currentUser; if(!u) return;
+        try{
+            await sendEmailVerification(u);
+            $("verifTxt").textContent = t("Te enviamos un correo a {e}. Revisa también la carpeta de spam.", {e: u.email});
+        }catch(e){
+            $("verifTxt").textContent = "⚠ " + (e.code === "auth/too-many-requests" ? t("Demasiados intentos. Espera un momento.")
+                : t("No se pudo completar la acción ({c}).", {c: e.code || e.message}));
+        }
+    };
+    $("btnVerifOk").onclick = async () => {
+        const u = auth.currentUser; if(!u) return;
+        try{ await u.reload(); }catch(e){}
+        if(u.emailVerified) show("verifBox", false);
+        else $("verifTxt").textContent = t("Aún no aparece verificado. Abre el enlace del correo y vuelve a pulsar.");
+    };
 
     async function subirAhora(){
         if(!ref) return;
@@ -83,14 +99,15 @@ function iniciar(){
         ref = null; clearTimeout(temporizador);
         if(!user){
             window.cerrarApp();
-            show("appBox", false); show("userBar", false); show("verifMsg", false); show("authCard", true);
+            show("appBox", false); show("userBar", false); show("verifMsg", false); show("verifBox", false); show("authCard", true);
             $("pass").value = "";
             return;
         }
         show("authCard", false); show("userBar", true); show("appBox", true);
         $("userEmail").textContent = "☁ " + user.email;
-        if(!user.emailVerified){ $("verifMsg").textContent = t("Verifica tu correo: te enviamos un mensaje al registrarte."); show("verifMsg", true); }
-        else show("verifMsg", false);
+        show("verifMsg", false);
+        $("verifTxt").textContent = t("Tu correo aún no está verificado.");
+        show("verifBox", !user.emailVerified);
         window.iniciarApp(user.uid);
         ref = doc(db, "usuarios", user.uid);
         anular = onSnapshot(ref, snap => {

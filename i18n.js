@@ -5,6 +5,11 @@
 (function(){
 const D = {
 "en": {
+"Tu correo aún no está verificado.": "Your email is not verified yet.",
+"Reenviar correo": "Resend email",
+"Ya verifiqué": "I already verified",
+"Te enviamos un correo a {e}. Revisa también la carpeta de spam.": "We sent an email to {e}. Also check your spam folder.",
+"Aún no aparece verificado. Abre el enlace del correo y vuelve a pulsar.": "Not verified yet. Open the link in the email and press again.",
 "Mes": "Month",
 "Control Financiero Personal": "Personal Finance Tracker",
 "💰 Control Financiero Personal": "💰 Personal Finance Tracker",
@@ -88,6 +93,11 @@ const D = {
 "Error de sincronización ({c}).": "Sync error ({c})."
 },
 "pt": {
+"Tu correo aún no está verificado.": "Seu e-mail ainda não foi verificado.",
+"Reenviar correo": "Reenviar e-mail",
+"Ya verifiqué": "Já verifiquei",
+"Te enviamos un correo a {e}. Revisa también la carpeta de spam.": "Enviamos um e-mail para {e}. Verifique também a pasta de spam.",
+"Aún no aparece verificado. Abre el enlace del correo y vuelve a pulsar.": "Ainda não aparece como verificado. Abra o link do e-mail e clique novamente.",
 "Mes": "Mês",
 "Control Financiero Personal": "Controle Financeiro Pessoal",
 "💰 Control Financiero Personal": "💰 Controle Financeiro Pessoal",
@@ -171,6 +181,11 @@ const D = {
 "Error de sincronización ({c}).": "Erro de sincronização ({c})."
 },
 "fr": {
+"Tu correo aún no está verificado.": "Votre e-mail n’est pas encore vérifié.",
+"Reenviar correo": "Renvoyer l’e-mail",
+"Ya verifiqué": "J’ai déjà vérifié",
+"Te enviamos un correo a {e}. Revisa también la carpeta de spam.": "Nous avons envoyé un e-mail à {e}. Vérifiez aussi vos courriers indésirables.",
+"Aún no aparece verificado. Abre el enlace del correo y vuelve a pulsar.": "Pas encore vérifié. Ouvrez le lien de l’e-mail et réessayez.",
 "Mes": "Mois",
 "Control Financiero Personal": "Suivi financier personnel",
 "💰 Control Financiero Personal": "💰 Suivi financier personnel",
