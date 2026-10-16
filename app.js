@@ -361,13 +361,16 @@ window.iniciarApp = function(uid){
         localStorage.setItem(K + "actualizado", String(Date.now()));
     }
     if(!listo){
-        $("mes").addEventListener("change", cargarMes);
+        $("mes").addEventListener("change", () => {
+            localStorage.setItem("mesSeleccionado", $("mes").value);
+            cargarMes();
+        });
         $("ingreso").addEventListener("input", guardarInfoMes);
         $("presupuesto").addEventListener("input", guardarInfoMes);
         $("montoCategoriaCaptura").addEventListener("keydown", e => { if(e.key === "Enter") categoriaSiguiente(); });
         listo = true;
     }
-    if(!$("mes").value) $("mes").value = new Date().toISOString().slice(0,7);
+    if(!$("mes").value) $("mes").value = localStorage.getItem("mesSeleccionado") || new Date().toISOString().slice(0,7);
     cargarCategorias();
     cargarDeudas();
     cargarMes();

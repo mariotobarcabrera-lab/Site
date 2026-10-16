@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Control Financiero Personal</title>
+<title>Control Personal</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#111827">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
 :root{
     --primary:#38bdf8;
@@ -51,30 +55,46 @@ tr.total td{font-weight:700;background:#0f172a;}
     body{padding:10px;}
     table{display:block;overflow-x:auto;}
 }
+.hidden{display:none!important}
+.userbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.userbar span{word-break:break-all}
+.acciones{display:flex;gap:8px;flex-wrap:wrap}
+.msg{margin:10px 0;color:#fbbf24;font-size:14px}
+
 </style>
 </head>
 <body>
 <div class="container">
-
 <h1>Control Personal</h1>
 
+<div id="userBar" class="card userbar hidden">
+    <span id="userEmail"></span>
+    <div class="acciones">
+        <button id="btnInstall" class="hidden">📲 Instalar app</button>
+        <button id="btnLogout" class="sec">Cerrar sesión</button>
+    </div>
+</div>
+<p id="verifMsg" class="msg hidden"></p>
+<p id="iosHint" class="msg hidden">En iPhone: toca Compartir y luego "Añadir a pantalla de inicio" para instalarla.</p>
+
+<div id="authCard" class="card hidden">
+    <h2>Inicia sesión</h2>
+    <div class="grid grid-2">
+        <input type="email" id="email" placeholder="Correo" autocomplete="email">
+        <input type="password" id="pass" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="current-password">
+        <button id="btnLogin">Entrar</button>
+        <button id="btnRegister" class="sec">Crear cuenta</button>
+    </div>
+    <p style="margin-top:10px"><a href="#" id="btnReset" style="color:var(--primary)">Olvidé mi contraseña</a></p>
+    <p id="msg" class="msg"></p>
+</div>
+
+<div id="appBox" class="hidden">
 <div class="dashboard">
     <div class="box"><h3>Ingreso</h3><h2 id="lblIngreso">$0.00</h2></div>
     <div class="box"><h3>Gastos</h3><h2 id="lblGastos">$0.00</h2></div>
     <div class="box"><h3>Saldo</h3><h2 id="lblSaldo">$0.00</h2></div>
     <div class="box"><h3>Deuda Total</h3><h2 id="lblDeudaTotal">$0.00</h2></div>
-</div>
-
-<div class="card">
-    <h2>☁ Sincronización</h2>
-    <p id="nubeEstado" class="vacio">Cargando…</p>
-    <div id="nubeForm" class="grid grid-2">
-        <input type="email" id="nubeEmail" placeholder="Correo" autocomplete="email">
-        <input type="password" id="nubePass" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="current-password">
-        <button id="btnEntrar">Entrar</button>
-        <button id="btnCrear" class="sec">Crear cuenta</button>
-    </div>
-    <button id="btnSalir" class="sec" style="display:none">Cerrar sesión</button>
 </div>
 
 <div class="card">
@@ -125,7 +145,7 @@ tr.total td{font-weight:700;background:#0f172a;}
     <br>
     <div id="listaDeudas"></div>
 </div>
-
+</div>
 </div>
 
 <!-- Modal administración de categorías -->
@@ -154,479 +174,8 @@ tr.total td{font-weight:700;background:#0f172a;}
     </div>
 </div>
 
-<script>
-/* ===== Estado ===== */
-function leer(clave, defecto){
-    try{
-        const v = JSON.parse(localStorage.getItem(clave));
-        return v === null || v === undefined ? defecto : v;
-    }catch(e){ return defecto; }
-}
-
-let categorias = leer("categorias", []);
-let datos      = leer("datos", {});
-let deudas     = leer("deudas", []);
-let categoriaActual = 0;
-let listaCaptura = [];
-
-function guardar(){
-    try{
-        localStorage.setItem("categorias", JSON.stringify(categorias));
-        localStorage.setItem("datos", JSON.stringify(datos));
-        localStorage.setItem("deudas", JSON.stringify(deudas));
-        localStorage.setItem("actualizado", String(Date.now()));
-    }catch(e){ console.error("No se pudo guardar", e); }
-    if(window.nubeSubir) window.nubeSubir();
-}
-
-/* Puente con la nube (lo usa el módulo de Firebase del final) */
-window.obtenerEstado = function(){
-    return {categorias, datos, deudas, actualizado: Number(localStorage.getItem("actualizado")) || 0};
-};
-window.aplicarDatosNube = function(d, actualizado){
-    categorias = d.categorias || [];
-    datos = d.datos || {};
-    deudas = d.deudas || [];
-    try{
-        localStorage.setItem("categorias", JSON.stringify(categorias));
-        localStorage.setItem("datos", JSON.stringify(datos));
-        localStorage.setItem("deudas", JSON.stringify(deudas));
-        localStorage.setItem("actualizado", String(actualizado));
-    }catch(e){}
-    cargarCategorias();
-    cargarDeudas();
-    cargarMes();
-};
-/* Datos antiguos sin fecha: se les asigna una para que no pierdan contra la nube */
-if(!localStorage.getItem("actualizado") &&
-   (categorias.length || deudas.length || Object.keys(datos).length)){
-    localStorage.setItem("actualizado", String(Date.now()));
-}
-
-/* ===== Utilidades ===== */
-const $ = id => document.getElementById(id);
-const num = v => { const n = parseFloat(v); return isNaN(n) || n < 0 ? 0 : n; };
-const dinero = n => n.toLocaleString("en-US",{style:"currency",currency:"USD"});
-const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-function esc(s){
-    return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-}
-
-function mesActual(){ return $("mes").value; }
-function datosMes(){
-    const m = mesActual();
-    if(!datos[m]) datos[m] = {ingreso:0, presupuesto:0, gastos:{}};
-    if(!datos[m].gastos) datos[m].gastos = {};
-    return datos[m];
-}
-function montoGasto(cat){
-    return cat.tipo === "fija" ? num(cat.monto) : num(datosMes().gastos[cat.id]);
-}
-function totalGastos(){
-    return categorias.reduce((s,c) => s + montoGasto(c), 0);
-}
-
-/* ===== Información del mes ===== */
-function cargarMes(){
-    const d = datosMes();
-    $("ingreso").value = d.ingreso || "";
-    $("presupuesto").value = d.presupuesto || "";
-    cargarTabla();
-    actualizarDashboard();
-}
-function guardarInfoMes(){
-    const d = datosMes();
-    d.ingreso = num($("ingreso").value);
-    d.presupuesto = num($("presupuesto").value);
-    guardar();
-    cargarTabla();
-    actualizarDashboard();
-}
-
-/* ===== Categorías ===== */
-function agregarCategoria(){
-    const nombre = $("nombreCategoria").value.trim();
-    const tipo = $("tipoCategoria").value;
-    const monto = num($("montoCategoria").value);
-    if(!nombre){ alert("Escribe el nombre de la categoría."); return; }
-    if(tipo === "fija" && monto <= 0){ alert("Las categorías fijas necesitan un monto."); return; }
-    categorias.push({id:nuevoId(), nombre, tipo, monto: tipo === "fija" ? monto : 0});
-    $("nombreCategoria").value = "";
-    $("montoCategoria").value = "";
-    guardar();
-    cargarCategorias();
-    cargarTabla();
-    actualizarDashboard();
-}
-
-function editarCategoria(id, campo, valor){
-    const c = categorias.find(x => x.id === id);
-    if(!c) return;
-    if(campo === "nombre"){
-        valor = valor.trim();
-        if(!valor){ cargarCategorias(); return; }
-        c.nombre = valor;
-    }else if(campo === "tipo"){
-        c.tipo = valor;
-        if(valor === "variable") c.monto = 0;
-    }else if(campo === "monto"){
-        c.monto = num(valor);
-    }
-    guardar();
-    cargarCategorias();
-    cargarTabla();
-    actualizarDashboard();
-}
-
-function duplicarCategoria(id){
-    const c = categorias.find(x => x.id === id);
-    if(!c) return;
-    const copia = {...c, id:nuevoId(), nombre:c.nombre + " (copia)"};
-    categorias.splice(categorias.indexOf(c)+1, 0, copia);
-    guardar();
-    cargarCategorias();
-    cargarTabla();
-    actualizarDashboard();
-}
-
-function eliminarCategoria(id){
-    const c = categorias.find(x => x.id === id);
-    if(!c) return;
-    if(!confirm('¿Eliminar la categoría "' + c.nombre + '"?')) return;
-    categorias = categorias.filter(x => x.id !== id);
-    Object.values(datos).forEach(m => { if(m.gastos) delete m.gastos[id]; });
-    guardar();
-    cargarCategorias();
-    cargarTabla();
-    actualizarDashboard();
-}
-
-function cargarCategorias(){
-    const cont = $("listaCategorias");
-    if(!categorias.length){
-        cont.innerHTML = '<p class="vacio">Aún no hay categorías.</p>';
-        return;
-    }
-    cont.innerHTML = categorias.map(c => `
-        <div class="item">
-            <div class="row">
-                <input type="text" value="${esc(c.nombre)}" aria-label="Nombre"
-                    onchange="editarCategoria('${c.id}','nombre',this.value)">
-                <select aria-label="Tipo" onchange="editarCategoria('${c.id}','tipo',this.value)">
-                    <option value="variable" ${c.tipo==="variable"?"selected":""}>Variable</option>
-                    <option value="fija" ${c.tipo==="fija"?"selected":""}>Fija</option>
-                </select>
-                ${c.tipo === "fija"
-                    ? `<input type="number" min="0" step="0.01" value="${num(c.monto)}" aria-label="Monto fijo"
-                        onchange="editarCategoria('${c.id}','monto',this.value)">`
-                    : `<span class="vacio">Monto variable</span>`}
-            </div>
-            <div class="acciones">
-                <button onclick="duplicarCategoria('${c.id}')">Duplicar</button>
-                <button class="danger" onclick="eliminarCategoria('${c.id}')">Eliminar</button>
-            </div>
-        </div>`).join("");
-}
-
-function abrirCategorias(){ cargarCategorias(); $("modalCategorias").style.display = "block"; }
-function cerrarCategorias(){ $("modalCategorias").style.display = "none"; }
-
-/* ===== Deudas (permanentes, no dependen del mes) ===== */
-function agregarDeuda(){
-    const nombre = $("nombreDeuda").value.trim();
-    const inicial = num($("montoInicial").value);
-    const saldoTxt = $("saldoDeuda").value;
-    const saldo = saldoTxt === "" ? inicial : num(saldoTxt);
-    if(!nombre || inicial <= 0){ alert("Indica el nombre y el monto original."); return; }
-    deudas.push({id:nuevoId(), nombre, inicial, saldo: Math.min(saldo, inicial)});
-    $("nombreDeuda").value = "";
-    $("montoInicial").value = "";
-    $("saldoDeuda").value = "";
-    guardar();
-    cargarDeudas();
-    actualizarDashboard();
-}
-
-function editarDeuda(id){
-    const d = deudas.find(x => x.id === id);
-    if(!d) return;
-    const nombre = prompt("Nombre de la deuda:", d.nombre);
-    if(nombre === null) return;
-    const inicial = prompt("Monto original:", d.inicial);
-    if(inicial === null) return;
-    const saldo = prompt("Saldo pendiente:", d.saldo);
-    if(saldo === null) return;
-    const ini = num(inicial);
-    if(!nombre.trim() || ini <= 0){ alert("Datos no válidos."); return; }
-    d.nombre = nombre.trim();
-    d.inicial = ini;
-    d.saldo = Math.min(num(saldo), ini);
-    guardar();
-    cargarDeudas();
-    actualizarDashboard();
-}
-
-function eliminarDeuda(id){
-    const d = deudas.find(x => x.id === id);
-    if(!d) return;
-    if(!confirm('¿Eliminar la deuda "' + d.nombre + '"?')) return;
-    deudas = deudas.filter(x => x.id !== id);
-    guardar();
-    cargarDeudas();
-    actualizarDashboard();
-}
-
-function cargarDeudas(){
-    const cont = $("listaDeudas");
-    if(!deudas.length){
-        cont.innerHTML = '<p class="vacio">No hay deudas registradas.</p>';
-        return;
-    }
-    cont.innerHTML = deudas.map(d => {
-        const pagado = Math.max(0, d.inicial - d.saldo);
-        const pct = d.inicial > 0 ? Math.min(100, Math.round(pagado / d.inicial * 100)) : 0;
-        return `
-        <div class="item">
-            <h3>${esc(d.nombre)}</h3>
-            <p>Original: ${dinero(d.inicial)} · Pagado: ${dinero(pagado)} · Pendiente: ${dinero(d.saldo)}</p>
-            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
-                <div class="progress-bar" style="width:${pct}%"></div>
-            </div>
-            <p>${pct}% pagado</p>
-            <br>
-            <div class="acciones" style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onclick="editarDeuda('${d.id}')">Editar</button>
-                <button class="danger" onclick="eliminarDeuda('${d.id}')">Eliminar</button>
-            </div>
-        </div>`;
-    }).join("");
-}
-
-/* ===== Tabla, alertas y dashboard ===== */
-function cargarTabla(){
-    const tbody = $("tablaGastos");
-    if(!categorias.length){
-        tbody.innerHTML = '<tr><td colspan="3" class="vacio">Crea una categoría para empezar.</td></tr>';
-    }else{
-        tbody.innerHTML = categorias.map(c => `
-            <tr>
-                <td>${esc(c.nombre)}</td>
-                <td>${c.tipo === "fija" ? "Fija" : "Variable"}</td>
-                <td class="num">${dinero(montoGasto(c))}</td>
-            </tr>`).join("") +
-            `<tr class="total"><td colspan="2">Total</td><td class="num">${dinero(totalGastos())}</td></tr>`;
-    }
-    mostrarAlertas();
-}
-
-function mostrarAlertas(){
-    const d = datosMes();
-    const gastos = totalGastos();
-    let html = "";
-    if(d.presupuesto > 0){
-        if(gastos > d.presupuesto){
-            html += `<div class="alerta">⚠ Superaste el presupuesto por ${dinero(gastos - d.presupuesto)}.</div>`;
-        }else if(gastos >= d.presupuesto * 0.8){
-            const pct = Math.round(gastos / d.presupuesto * 100);
-            html += `<div class="alerta warn">⚠ Ya usaste el ${pct}% del presupuesto.</div>`;
-        }
-    }
-    if(d.ingreso > 0 && gastos > d.ingreso){
-        html += `<div class="alerta">🚨 Tus gastos superan tu ingreso por ${dinero(gastos - d.ingreso)}.</div>`;
-    }
-    $("alertas").innerHTML = html;
-}
-
-function actualizarDashboard(){
-    const d = datosMes();
-    const gastos = totalGastos();
-    const saldo = d.ingreso - gastos;
-    const deudaTotal = deudas.reduce((s,x) => s + num(x.saldo), 0);
-    $("lblIngreso").textContent = dinero(d.ingreso);
-    $("lblGastos").textContent = dinero(gastos);
-    $("lblSaldo").textContent = dinero(saldo);
-    $("lblDeudaTotal").textContent = dinero(deudaTotal);
-    $("lblSaldo").style.color = saldo < 0 ? "#991b1b" : "";
-}
-
-/* ===== Captura rápida (una categoría variable por pantalla) ===== */
-function actualizarGasto(id, valor){
-    datosMes().gastos[id] = num(valor);
-    guardar();
-    cargarTabla();
-    actualizarDashboard();
-}
-
-function guardarCapturaActual(){
-    const c = listaCaptura[categoriaActual];
-    if(c) actualizarGasto(c.id, $("montoCategoriaCaptura").value);
-}
-
-function abrirCapturaRapida(){
-    listaCaptura = categorias.filter(c => c.tipo === "variable");
-    if(!listaCaptura.length){
-        alert("No hay categorías variables. Las fijas se calculan automáticamente.");
-        return;
-    }
-    categoriaActual = 0;
-    $("modalCaptura").style.display = "block";
-    mostrarCategoria();
-}
-
-function mostrarCategoria(){
-    const c = listaCaptura[categoriaActual];
-    $("contadorCategoria").textContent = "Categoría " + (categoriaActual + 1) + " de " + listaCaptura.length;
-    $("nombreCategoriaCaptura").textContent = c.nombre;
-    const actual = num(datosMes().gastos[c.id]);
-    $("montoCategoriaCaptura").value = actual || "";
-    $("btnSiguiente").textContent = categoriaActual === listaCaptura.length - 1 ? "Finalizar ✔" : "Siguiente →";
-    $("montoCategoriaCaptura").focus();
-}
-
-function categoriaAnterior(){
-    guardarCapturaActual();
-    if(categoriaActual > 0){ categoriaActual--; mostrarCategoria(); }
-}
-
-function categoriaSiguiente(){
-    guardarCapturaActual();
-    if(categoriaActual < listaCaptura.length - 1){
-        categoriaActual++;
-        mostrarCategoria();
-    }else{
-        cerrarCaptura();
-    }
-}
-
-function cerrarCaptura(){
-    guardarCapturaActual();
-    $("modalCaptura").style.display = "none";
-}
-
-/* ===== Inicio ===== */
-// 1. Intentar leer el mes guardado directamente de localStorage (sin JSON.parse)
-const mesGuardado = localStorage.getItem("mesSeleccionado");
-
-// 2. Si existe el mes guardado, ponerlo. Si no, poner el mes actual.
-if (mesGuardado) {
-    $("mes").value = mesGuardado;
-} else {
-    $("mes").value = new Date().toISOString().slice(0,7);
-}
-
-// 3. Escuchar el cambio y guardar el valor seleccionado
-$("mes").addEventListener("change", () => {
-    const valorSeleccionado = $("mes").value;
-    localStorage.setItem("mesSeleccionado", valorSeleccionado); // Guardar como texto simple
-    cargarMes(); // Actualizar la tabla y el dashboard
-});
-
-$("ingreso").addEventListener("input", guardarInfoMes);
-$("presupuesto").addEventListener("input", guardarInfoMes);
-$("montoCategoriaCaptura").addEventListener("keydown", e => { 
-    if(e.key === "Enter") categoriaSiguiente(); 
-});
-
-cargarCategorias();
-cargarDeudas();
-cargarMes();
-
-</script>
-
-<script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut}
-    from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getFirestore, doc, setDoc, onSnapshot}
-    from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-
-/* ===== PEGA AQUÍ los datos de tu proyecto Firebase ===== */
-const firebaseConfig = {
-    apiKey: "AIzaSyAldbC3MFpbIZqiCs3TLX6dnMOAzDWS19o",
-    authDomain: "siteg-691cd.firebaseapp.com",
-    projectId: "siteg-691cd",
-    appId: "1:953137572437:web:cc163afa907309005042dc"
-};
-
-const $n = id => document.getElementById(id);
-const estado = $n("nubeEstado");
-
-if(firebaseConfig.apiKey === "PEGA_AQUI"){
-    estado.textContent = "Sincronización sin configurar: los datos se guardan solo en este dispositivo.";
-    $n("nubeForm").style.display = "none";
-}else{
-    iniciar();
-}
-
-function iniciar(){
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    let ref = null, anular = null, temporizador = null;
-
-    const mensajes = {
-        "auth/invalid-credential": "Correo o contraseña incorrectos.",
-        "auth/invalid-email": "El correo no es válido.",
-        "auth/email-already-in-use": "Ese correo ya tiene cuenta. Usa Entrar.",
-        "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
-        "auth/missing-password": "Escribe la contraseña.",
-        "auth/too-many-requests": "Demasiados intentos. Espera un momento."
-    };
-    const error = e => { estado.textContent = "⚠ " + (mensajes[e.code] || "No se pudo completar la acción (" + (e.code || e.message) + ")."); };
-
-    async function subirAhora(){
-        if(!ref) return;
-        const e = window.obtenerEstado();
-        try{
-            await setDoc(ref, {
-                json: JSON.stringify({categorias:e.categorias, datos:e.datos, deudas:e.deudas}),
-                actualizado: e.actualizado
-            });
-        }catch(err){ estado.textContent = "⚠ No se pudo sincronizar (" + (err.code || err.message) + ")."; }
-    }
-
-    /* La app llama a esto cada vez que guarda; se agrupa para no escribir en cada tecla */
-    window.nubeSubir = () => {
-        if(!ref) return;
-        clearTimeout(temporizador);
-        temporizador = setTimeout(subirAhora, 800);
-    };
-
-    $n("btnEntrar").onclick = () =>
-        signInWithEmailAndPassword(auth, $n("nubeEmail").value.trim(), $n("nubePass").value).catch(error);
-    $n("btnCrear").onclick = () =>
-        createUserWithEmailAndPassword(auth, $n("nubeEmail").value.trim(), $n("nubePass").value).catch(error);
-    $n("btnSalir").onclick = () => signOut(auth);
-
-    onAuthStateChanged(auth, user => {
-        if(anular){ anular(); anular = null; }
-        ref = null;
-        if(!user){
-            $n("nubeForm").style.display = "";
-            $n("btnSalir").style.display = "none";
-            estado.textContent = "Inicia sesión para sincronizar tus datos entre dispositivos.";
-            return;
-        }
-        $n("nubeForm").style.display = "none";
-        $n("btnSalir").style.display = "";
-        $n("nubePass").value = "";
-        estado.textContent = "☁ Sincronizando como " + user.email + "…";
-        ref = doc(db, "usuarios", user.uid);
-
-        anular = onSnapshot(ref, snap => {
-            if(snap.metadata.hasPendingWrites) return;
-            const local = window.obtenerEstado();
-            if(!snap.exists()){ subirAhora(); estado.textContent = "☁ Sincronizado como " + user.email; return; }
-            const nube = snap.data();
-            if((nube.actualizado || 0) > local.actualizado){
-                try{ window.aplicarDatosNube(JSON.parse(nube.json), nube.actualizado || 0); }catch(e){ console.error(e); }
-            }else if((nube.actualizado || 0) < local.actualizado){
-                subirAhora();
-            }
-            estado.textContent = "☁ Sincronizado como " + user.email;
-        }, err => { estado.textContent = "⚠ Error de sincronización (" + (err.code || err.message) + ")."; });
-    });
-}
-</script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+<script type="module" src="core.js"></script>
 </body>
 </html>
