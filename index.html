@@ -1,182 +1,209 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Control Personal</title>
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#111827">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumeozone</title>
+<meta name="description" content="Lumeozone">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
-:root{
-    --primary:#38bdf8;
-    --bg:#111827;
-    --card:#1f2937;
-    --border:#374151;
-    --text:#f8fafc;
-    --danger:#991b1b;
-    --warn:#92400e;
-    --ok:#22c55e;
-}
-*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif;}
-body{background:var(--bg);color:var(--text);padding:20px;}
-.container{max-width:1400px;margin:auto;}
-.card{background:var(--card);border-radius:10px;padding:20px;margin-bottom:20px;}
-h1,h2,h3{margin-bottom:15px;}
-.grid{display:grid;gap:10px;}
-.grid-2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
-.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-bottom:20px;}
-.box{background:var(--primary);color:#0f172a;text-align:center;border-radius:10px;padding:15px;}
-.box h3{margin-bottom:5px;font-size:16px;}
-input,select{width:100%;padding:10px;border-radius:6px;border:1px solid var(--border);background:#0f172a;color:white;}
-button{background:var(--primary);color:#0f172a;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;}
-button:hover{filter:brightness(1.1);}
-button.danger{background:#ef4444;color:white;}
-button.sec{background:#475569;color:white;}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
-table{width:100%;border-collapse:collapse;}
-th{background:var(--primary);color:#0f172a;}
-td,th{border:1px solid var(--border);padding:10px;text-align:left;}
-td.num,th.num{text-align:right;}
-tr.total td{font-weight:700;background:#0f172a;}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;overflow-y:auto;}
-.modal-content{background:var(--card);max-width:900px;margin:30px auto;border-radius:10px;padding:20px;}
-.item{border:1px solid var(--border);padding:10px;border-radius:8px;margin-bottom:10px;}
-.item .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;align-items:center;margin-bottom:8px;}
-.item .acciones{display:flex;gap:8px;flex-wrap:wrap;}
-.progress{height:18px;border-radius:20px;overflow:hidden;background:#334155;margin:8px 0;}
-.progress-bar{background:var(--primary);height:100%;transition:width .3s;}
-.alerta{background:var(--danger);padding:10px;margin-top:10px;border-radius:6px;}
-.alerta.warn{background:var(--warn);}
-.vacio{color:#94a3b8;padding:10px 0;}
-.captura-nav{display:flex;gap:10px;flex-wrap:wrap;}
-@media(max-width:768px){
-    body{padding:10px;}
-    table{display:block;overflow-x:auto;}
-}
-.hidden{display:none!important}
-.userbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.userbar span{word-break:break-all}
-.acciones{display:flex;gap:8px;flex-wrap:wrap}
-.msg{margin:10px 0;color:#fbbf24;font-size:14px}
+:root{--bg:#021424;--panel:rgba(255,255,255,.04);--line:rgba(255,255,255,.16);--teal:#2fc7b8;--red:#ef4a5c;--text:#fff;--muted:#b9c8d4}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Roboto',system-ui,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;letter-spacing:.04em}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:8px}
 
+.top{position:relative;min-height:100vh;overflow:hidden;
+  background:radial-gradient(ellipse 60% 55% at 22% 38%,#06365a 0%,rgba(6,54,90,0) 70%),var(--bg)}
+.waves{position:absolute;inset:0;width:100%;height:100%}
+.waves g{animation:drift 14s ease-in-out infinite alternate;transform-origin:60% 50%}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-18px,12px) scale(1.03)}}
+
+nav{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:1240px;margin:0 auto;padding:32px 40px}
+.logo{display:flex;align-items:center;gap:14px;font-weight:700;font-size:1.05rem}
+.bars{display:grid;gap:7px}
+.bars i{display:block;height:2px;background:#fff}
+.bars i:nth-child(1){width:44px}.bars i:nth-child(2){width:30px}.bars i:nth-child(3){width:20px}
+.links{display:flex;align-items:center;gap:clamp(14px,3vw,44px);list-style:none}
+.links a{font-size:1rem;transition:color .2s}
+.links a:hover{color:var(--teal)}
+.pill{border:2px solid #fff;border-radius:999px;padding:6px 26px}
+.pill:hover{border-color:var(--teal)}
+.lang{background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 12px;font:inherit;font-size:.82rem;cursor:pointer}
+.lang:hover{color:var(--teal);border-color:var(--teal)}
+
+.hero{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:12vh 40px 14vh}
+h1{font-size:clamp(2.6rem,7vw,4.6rem);font-weight:300;line-height:1.1;letter-spacing:.07em}
+h1 b{font-weight:700;color:var(--teal)}
+.sub{margin-top:8px;font-size:clamp(1rem,2vw,1.35rem);letter-spacing:.3em}
+.desc{margin-top:44px;max-width:37em;color:var(--text);font-size:.98rem}
+.btn{display:inline-block;margin-top:44px;padding:10px 32px;border-radius:999px;background:var(--teal);color:#fff;font-weight:700;letter-spacing:.2em;box-shadow:0 8px 18px rgba(0,0,0,.35);transition:transform .2s,filter .2s}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+
+section{position:relative;padding:96px 40px;background:var(--bg)}
+.in{max-width:1000px;margin:0 auto}
+h2{font-size:clamp(1.7rem,3.5vw,2.4rem);font-weight:300;letter-spacing:.1em;margin-bottom:14px}
+h2::after{content:"";display:block;width:56px;height:3px;background:linear-gradient(90deg,var(--teal),var(--red));margin-top:14px;border-radius:2px}
+.lead{color:var(--muted);max-width:36em;margin:18px 0 38px}
+
+.app{display:flex;align-items:center;gap:24px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;max-width:660px;transition:border-color .2s}
+.app:hover{border-color:var(--teal)}
+.icon{flex:0 0 64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--teal),#0b6f8a);display:grid;place-items:center;font-size:1.9rem}
+.info{flex:1 1 220px}
+.info h3{font-weight:700;font-size:1.15rem;letter-spacing:.05em}
+.info p{color:var(--muted);font-size:.94rem;margin-top:4px}
+.app .btn{margin:0;letter-spacing:.1em}
+
+.about{display:grid;grid-template-columns:1.2fr 1fr;gap:56px}
+.about p{color:var(--muted);margin-bottom:16px}
+.vals{list-style:none;display:grid;gap:14px}
+.vals li{background:var(--panel);border-left:3px solid var(--teal);border-radius:0 14px 14px 0;padding:16px 20px}
+.vals strong{display:block}
+.vals span{color:var(--muted);font-size:.92rem}
+
+.mail{display:inline-block;margin-top:6px;font-size:1.25rem;color:var(--teal);border-bottom:1px solid var(--teal)}
+footer{padding:28px 40px;color:var(--muted);font-size:.85rem;text-align:center;border-top:1px solid var(--line)}
+
+@media (max-width:760px){
+  nav{padding:22px 20px;flex-wrap:wrap}
+  .hero{padding:8vh 20px 12vh}
+  section{padding:72px 20px}
+  .about{grid-template-columns:1fr;gap:32px}
+  .links .hide-s{display:none}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.waves g{animation:none}.btn{transition:none}}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>Control Personal</h1>
 
-<div id="userBar" class="card userbar hidden">
-    <span id="userEmail"></span>
-    <div class="acciones">
-        <button id="btnInstall" class="hidden">📲 Instalar app</button>
-        <button id="btnLogout" class="sec">Cerrar sesión</button>
+<div class="top" id="inicio">
+  <svg class="waves" viewBox="0 0 1200 700" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="gr" gradientUnits="userSpaceOnUse" x1="250" y1="0" x2="1200" y2="700">
+        <stop offset="0" stop-color="#ef4a5c"/><stop offset=".3" stop-color="#2fc7b8"/>
+        <stop offset=".7" stop-color="#2fc7b8" stop-opacity=".7"/><stop offset="1" stop-color="#ef4a5c"/>
+      </linearGradient>
+    </defs>
+    <g id="lines" fill="none" stroke="url(#gr)" stroke-width=".8" stroke-opacity=".6"></g>
+  </svg>
+
+  <nav aria-label="Menu">
+    <a class="logo" href="#inicio"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span><span>Lumeozone</span></a>
+    <ul class="links">
+      <li class="hide-s"><a href="#inicio" data-i="nav_home"></a></li>
+      <li><a href="#apps" data-i="nav_apps"></a></li>
+      <li class="hide-s"><a href="#nosotros" data-i="nav_about"></a></li>
+      <li><a class="pill" href="#contacto" data-i="nav_contact"></a></li>
+      <li><button class="lang" id="lang" type="button" aria-label="Language"></button></li>
+    </ul>
+  </nav>
+
+  <div class="hero">
+    <h1><b>Lumeo</b>zone</h1>
+    <p class="sub" data-i="sub"></p>
+    <p class="desc" data-i="desc"></p>
+    <a class="btn" href="#apps" data-i="cta"></a>
+  </div>
+</div>
+
+<section id="apps">
+  <div class="in">
+    <h2 data-i="apps_t"></h2>
+    <p class="lead" data-i="apps_l"></p>
+    <article class="app">
+      <div class="icon" aria-hidden="true">💰</div>
+      <div class="info"><h3 data-i="app_n"></h3><p data-i="app_d"></p></div>
+      <!-- CAMBIA ESTE ENLACE por la dirección de tu app -->
+      <a class="btn" href="https://mariotobarcabrera-lab.github.io/Site/" target="_blank" rel="noopener" data-i="app_b"></a>
+    </article>
+  </div>
+</section>
+
+<section id="nosotros">
+  <div class="in about">
+    <div>
+      <h2 data-i="about_t"></h2>
+      <p data-i="about_1"></p>
+      <p data-i="about_2"></p>
     </div>
-</div>
-<p id="verifMsg" class="msg hidden"></p>
-<div id="verifBox" class="msg hidden"><div id="verifTxt"></div><div class="acciones" style="margin-top:8px"><button id="btnVerif" class="sec">Reenviar correo</button><button id="btnVerifOk" class="sec">Ya verifiqué</button></div></div>
-<p id="iosHint" class="msg hidden">En iPhone: toca Compartir y luego "Añadir a pantalla de inicio" para instalarla.</p>
+    <ul class="vals">
+      <li><strong data-i="v1"></strong><span data-i="v1d"></span></li>
+      <li><strong data-i="v2"></strong><span data-i="v2d"></span></li>
+      <li><strong data-i="v3"></strong><span data-i="v3d"></span></li>
+    </ul>
+  </div>
+</section>
 
-<div id="authCard" class="card hidden">
-    <h2>Inicia sesión</h2>
-    <div class="grid grid-2">
-        <input type="email" id="email" placeholder="Correo" autocomplete="email">
-        <input type="password" id="pass" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="current-password">
-        <button id="btnLogin">Entrar</button>
-        <button id="btnRegister" class="sec">Crear cuenta</button>
-    </div>
-    <p style="margin-top:10px"><a href="#" id="btnReset" style="color:var(--primary)">Olvidé mi contraseña</a></p>
-    <p id="msg" class="msg"></p>
-</div>
+<section id="contacto">
+  <div class="in">
+    <h2 data-i="contact_t"></h2>
+    <p class="lead" data-i="contact_l"></p>
+    <!-- CAMBIA ESTE CORREO por el tuyo -->
+    <a class="mail" href="mailto:content.varsal@gmail.com">content.varsal@gmail.com</a>
+  </div>
+</section>
 
-<div id="appBox" class="hidden">
-<div class="dashboard">
-    <div class="box"><h3>Ingreso</h3><h2 id="lblIngreso">$0.00</h2></div>
-    <div class="box"><h3>Gastos</h3><h2 id="lblGastos">$0.00</h2></div>
-    <div class="box"><h3>Saldo</h3><h2 id="lblSaldo">$0.00</h2></div>
-    <div class="box"><h3>Deuda Total</h3><h2 id="lblDeudaTotal">$0.00</h2></div>
-</div>
+<footer>© 2026 Lumeozone</footer>
 
-<div class="card">
-    <h2>Información del Mes</h2>
-    <div class="grid grid-2">
-        <input type="month" id="mes" aria-label="Mes">
-        <input type="number" id="ingreso" min="0" step="0.01" placeholder="Ingreso mensual">
-        <input type="number" id="presupuesto" min="0" step="0.01" placeholder="Presupuesto mensual">
-    </div>
-</div>
+<script>
+// Olas
+(function(){
+  var A=[[380,-20],[300,420],[900,150],[1250,320]],B=[[260,-20],[520,700],[1000,520],[1250,780]],N=70,out="";
+  function L(a,b,t){return (a+(b-a)*t).toFixed(1)}
+  for(var i=0;i<N;i++){
+    var t=i/(N-1),p=[];
+    for(var k=0;k<4;k++)p.push(L(A[k][0],B[k][0],t)+","+L(A[k][1],B[k][1],t));
+    out+='<path d="M'+p[0]+' C'+p[1]+' '+p[2]+' '+p[3]+'"/>';
+  }
+  document.getElementById("lines").innerHTML=out;
+})();
 
-<div class="card">
-    <h2>Categorías</h2>
-    <div class="grid grid-2">
-        <input type="text" id="nombreCategoria" placeholder="Nombre categoría">
-        <select id="tipoCategoria">
-            <option value="variable">Variable</option>
-            <option value="fija">Fija</option>
-        </select>
-        <input type="number" id="montoCategoria" min="0" step="0.01" placeholder="Monto fijo">
-        <button onclick="agregarCategoria()">Agregar Categoría</button>
-    </div>
-    <br>
-    <button onclick="abrirCategorias()">⚙ Administrar Categorías</button>
-</div>
-
-<div class="card">
-    <h2>Gastos del Mes</h2>
-    <button onclick="abrirCapturaRapida()">📝 Actualizar Gastos del Mes</button>
-    <br><br>
-    <table>
-        <thead>
-            <tr><th>Categoría</th><th>Tipo</th><th class="num">Monto</th></tr>
-        </thead>
-        <tbody id="tablaGastos"></tbody>
-    </table>
-    <div id="alertas"></div>
-</div>
-
-<div class="card">
-    <h2>💳 Deudas</h2>
-    <div class="grid grid-2">
-        <input type="text" id="nombreDeuda" placeholder="Nombre deuda">
-        <input type="number" id="montoInicial" min="0" step="0.01" placeholder="Monto original">
-        <input type="number" id="saldoDeuda" min="0" step="0.01" placeholder="Saldo pendiente">
-        <button onclick="agregarDeuda()">Agregar Deuda</button>
-    </div>
-    <br>
-    <div id="listaDeudas"></div>
-</div>
-</div>
-</div>
-
-<!-- Modal administración de categorías -->
-<div id="modalCategorias" class="modal">
-    <div class="modal-content">
-        <h2>Administración de Categorías</h2>
-        <div id="listaCategorias"></div>
-        <br>
-        <button onclick="cerrarCategorias()">Cerrar</button>
-    </div>
-</div>
-
-<!-- Modal captura rápida -->
-<div id="modalCaptura" class="modal">
-    <div class="modal-content">
-        <h2>Captura Rápida</h2>
-        <p id="contadorCategoria"></p>
-        <h3 id="nombreCategoriaCaptura"></h3>
-        <input type="number" id="montoCategoriaCaptura" min="0" step="0.01" placeholder="Monto">
-        <br><br>
-        <div class="captura-nav">
-            <button class="sec" onclick="categoriaAnterior()">← Anterior</button>
-            <button id="btnSiguiente" onclick="categoriaSiguiente()">Siguiente →</button>
-            <button class="sec" onclick="cerrarCaptura()">Cerrar</button>
-        </div>
-    </div>
-</div>
-
-<script src="i18n.js"></script>
-<script src="app.js"></script>
-<script type="module" src="core.js"></script>
+// Idiomas
+var T={
+ es:{nav_home:"Inicio",nav_apps:"Apps",nav_about:"Quiénes somos",nav_contact:"Contacto",
+  sub:"Apps que facilitan tu vida",
+  desc:"Somos una empresa dedicada a crear aplicaciones simples y útiles que te ahorran tiempo y esfuerzo en el día a día.",
+  cta:"Ver apps",apps_t:"Apps",apps_l:"Herramientas listas para usar desde tu navegador o tu celular.",
+  app_n:"Control de gastos",app_d:"Registra lo que gastas y mira a dónde se va tu dinero cada mes.",app_b:"Abrir app",
+  about_t:"Quiénes somos",
+  about_1:"Somos una empresa dedicada a crear apps que facilitan tu vida. Partimos de una idea sencilla: la tecnología debe ahorrarte tiempo y esfuerzo, no complicarte el día.",
+  about_2:"Diseñamos cada aplicación para que sea fácil de entender, rápida de usar y útil desde el primer minuto.",
+  v1:"Sencillez",v1d:"Sin pasos de más ni menús confusos.",v2:"Utilidad real",v2d:"Cada app resuelve una necesidad concreta.",
+  v3:"Mejora constante",v3d:"Escuchamos a quienes las usan y las mejoramos.",
+  contact_t:"Contacto",contact_l:"¿Tienes una pregunta o una idea? Escríbenos."},
+ en:{nav_home:"Home",nav_apps:"Apps",nav_about:"About",nav_contact:"Contact",
+  sub:"Apps that make life easier",
+  desc:"We are a company dedicated to building simple, useful apps that save you time and effort every day.",
+  cta:"See apps",apps_t:"Apps",apps_l:"Tools ready to use from your browser or your phone.",
+  app_n:"Expense tracker",app_d:"Log what you spend and see where your money goes each month.",app_b:"Open app",
+  about_t:"About us",
+  about_1:"We are a company dedicated to building apps that make your life easier. Our idea is simple: technology should save you time and effort, not complicate your day.",
+  about_2:"We design every app to be easy to understand, quick to use and useful from the first minute.",
+  v1:"Simplicity",v1d:"No extra steps or confusing menus.",v2:"Real usefulness",v2d:"Each app solves a specific need.",
+  v3:"Constant improvement",v3d:"We listen to the people who use our apps and keep improving them.",
+  contact_t:"Contact",contact_l:"Have a question or an idea? Write to us."}
+};
+function pick(){
+  var s=null;try{s=localStorage.getItem("lang")}catch(e){}
+  if(s&&T[s])return s;
+  var l=(navigator.languages&&navigator.languages[0]||navigator.language||"en").slice(0,2).toLowerCase();
+  return T[l]?l:"en";
+}
+function apply(l){
+  document.documentElement.lang=l;
+  document.querySelectorAll("[data-i]").forEach(function(e){e.textContent=T[l][e.dataset.i]});
+  document.title="Lumeozone | "+T[l].sub;
+  document.querySelector('meta[name=description]').content=T[l].desc;
+  document.getElementById("lang").textContent=l==="es"?"EN":"ES";
+}
+var cur=pick();apply(cur);
+document.getElementById("lang").onclick=function(){
+  cur=cur==="es"?"en":"es";apply(cur);
+  try{localStorage.setItem("lang",cur)}catch(e){}
+};
+</script>
 </body>
 </html>
